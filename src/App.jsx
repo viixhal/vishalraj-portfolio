@@ -386,6 +386,7 @@ function NavLinks({ NAV, activeNav, scrollTo }) {
   return (
     <div
       ref={containerRef}
+      className="mobile-nav-scroll"
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -431,6 +432,7 @@ function MagNavBtn({ item, active, btnRefs, onClick }) {
   const mag = useMagnetic(0.28);
   return (
     <motion.button
+      className="nav-btn"
       ref={el => { btnRefs.current[item] = el; mag.ref.current = el; }}
       onClick={onClick}
       onMouseMove={mag.onMove}
@@ -777,8 +779,20 @@ export default function VishalrajPortfolio() {
         @media (max-width: 900px) {
           .responsive-grid { grid-template-columns: 1fr !important; }
           .mobile-hero-card { padding: 24px !important; }
-          .mobile-nav { flex-wrap: wrap !important; justify-content: center !important; gap: 12px !important; padding: 12px !important; }
-          .mobile-nav-logo { justify-content: center !important; width: 100% !important; }
+          .mobile-nav { flex-direction: column !important; gap: 16px !important; padding: 12px 12px 0 12px !important; }
+          .mobile-nav-logo { justify-content: center !important; width: 100% !important; margin-bottom: 6px; }
+          .mobile-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+        }
+        .mobile-nav-scroll {
+          overflow-x: auto;
+          max-width: 100vw;
+          padding-bottom: 12px !important;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+        .mobile-nav-scroll::-webkit-scrollbar { display: none; }
+        @media (max-width: 420px) {
+          .nav-btn { font-size: 11.5px !important; padding: 6px 14px !important; }
         }
       `}</style>
 
@@ -883,7 +897,7 @@ export default function VishalrajPortfolio() {
             </div>
 
             {/* Stats */}
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
+            <motion.div className="mobile-stats" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
               style={{ marginTop: 28, display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
               {[{ v: "4+", l: "Projects" }, { v: "Full-Stack", l: "Focus" }, { v: "12+", l: "Technologies" }, { v: "Open", l: "Status" }].map(s => (
                 <div key={s.l} style={{ borderRadius: T.radiusSm, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", padding: "14px 8px", textAlign: "center" }}>
