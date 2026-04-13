@@ -776,6 +776,9 @@ export default function VishalrajPortfolio() {
         input:focus { outline: none; }
         @media (max-width: 900px) {
           .responsive-grid { grid-template-columns: 1fr !important; }
+          .mobile-hero-card { padding: 24px !important; }
+          .mobile-nav { flex-wrap: wrap !important; justify-content: center !important; gap: 12px !important; padding: 12px !important; }
+          .mobile-nav-logo { justify-content: center !important; width: 100% !important; }
         }
       `}</style>
 
@@ -797,9 +800,9 @@ export default function VishalrajPortfolio() {
           initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
           style={{ position: "sticky", top: 16, zIndex: 100, marginBottom: 28, borderRadius: T.radius, border: `1px solid rgba(255,255,255,0.10)`, background: T.navBg, backdropFilter: "blur(30px)", WebkitBackdropFilter: "blur(30px)", padding: "12px 20px", boxShadow: "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)" }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div className="mobile-nav" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
             {/* Logo */}
-            <button onClick={() => scrollTo("Home")} style={{ display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            <button className="mobile-nav-logo" onClick={() => scrollTo("Home")} style={{ display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
               <motion.div whileHover={{ scale: 1.07 }}
                 style={{ width: 40, height: 40, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.22)", overflow: "hidden", flexShrink: 0, boxShadow: "0 0 0 1px rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.20)" }}>
                 <img src="/profile.jpg" alt="Vishalraj" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", filter: "grayscale(15%) contrast(1.05)" }} />
@@ -819,7 +822,7 @@ export default function VishalrajPortfolio() {
         {/* ══════════ HERO ══════════ */}
         <section id="home" className="responsive-grid" style={{ display: "grid", gap: 14, gridTemplateColumns: "minmax(0,1.5fr) minmax(0,0.85fr)", marginBottom: 6 }}>
           {/* Main hero card */}
-          <GlassCard hover={false} style={{ padding: "36px 40px" }}>
+          <GlassCard hover={false} className="mobile-hero-card" style={{ padding: "36px 40px" }}>
             {/* Available badge */}
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
               style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: T.pill, border: "1px solid rgba(255,255,255,0.13)", background: "rgba(255,255,255,0.06)", padding: "5px 14px", fontSize: 11, color: T.textSub, marginBottom: 28 }}>
@@ -1020,7 +1023,7 @@ export default function VishalrajPortfolio() {
         {/* ══════════ CONTACT ══════════ */}
         <section id="contact" style={{ paddingTop: 72, paddingBottom: 130 }}>
           <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }}>
-            <GlassCard hover={false} style={{ padding: "44px 48px" }}>
+            <GlassCard hover={false} className="mobile-hero-card" style={{ padding: "44px 48px" }}>
               <div className="responsive-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(0,0.8fr)", gap: 32 }}>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: T.textMuted, marginBottom: 10 }}>Contact</div>
