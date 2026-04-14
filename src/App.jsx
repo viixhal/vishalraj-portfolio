@@ -299,7 +299,7 @@ const SKILLS = [
 
 const PROJECTS = [
   { id: 1, type: "Web / Full Stack", icon: "🔗", title: "Payment System", summary: "Payment gateway — no bank, no middleman. Transactions go directly via secure APIs.", stack: ["Node.js", "React", "Stripe", "Express"], details: "Built with secure API integration. Logic handles all payment flow — trustless, transparent, and immutable." },
-  { id: 2, type: "Web / E-Commerce", icon: "🛒", title: "E-Commerce Platform", summary: "An online store where all logic lives on the server — no platform fees, no single point of failure.", stack: ["Node.js", "React", "Express", "MongoDB"], details: "Product listings and payments recorded on database. Transparent, verifiable, and tamper-proof by design." },
+  { id: 2, type: "Web / E-Commerce", icon: "🛒", title: "E-Commerce Platform", summary: "An online store where all logic lives on the server — no platform fees, no single point of failure.", stack: ["Node.js", "React", "Express", "MongoDB"], details: "Product listings and payments recorded on database. Transparent, verifiable, and tamper-proof by design.", demoLink: "https://aveon.netlify.app" },
   { id: 3, type: "AI / Computer Vision", icon: "🖼️", title: "Image Analyzer", summary: "AI model detecting digitally manipulated or AI-generated images — fighting synthetic misinformation.", stack: ["Python", "Machine Learning", "OpenCV", "Flask"], details: "Identifies statistical anomalies, edge inconsistencies, and compression artifacts typical of GAN-generated or Photoshopped content." },
   { id: 4, type: "IoT / Hardware", icon: "📡", title: "Smart Study Monitor", summary: "Arduino-powered IoT system tracking study environment and focus patterns in real time.", stack: ["Arduino", "Python", "IoT Sensors", "C++"], details: "Ambient light, motion, and proximity sensors detect attention lapses. LED/buzzer alerts and a Python dashboard for session data." },
 ];
@@ -1119,7 +1119,7 @@ export default function VishalrajPortfolio() {
                   {selProject.stack.map(item => <Tag key={item}>{item}</Tag>)}
                 </div>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button style={S.btnW}><ArrowUpRight style={{ width: 13, height: 13 }} /> Live Demo</button>
+                  <button style={S.btnW} onClick={() => selProject.demoLink && window.open(selProject.demoLink, '_blank')}><ArrowUpRight style={{ width: 13, height: 13 }} /> Live Demo</button>
                   <button style={S.btnG}><ExternalLink style={{ width: 13, height: 13 }} /> Source Code</button>
                 </div>
               </div>
