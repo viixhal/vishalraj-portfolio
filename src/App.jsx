@@ -298,10 +298,10 @@ const SKILLS = [
 ];
 
 const PROJECTS = [
-  { id: 1, type: "Web / Full Stack", icon: "🔗", title: "Payment System", summary: "Payment gateway — no bank, no middleman. Transactions go directly via secure APIs.", stack: ["Node.js", "React", "Stripe", "Express"], details: "Built with secure API integration. Logic handles all payment flow — trustless, transparent, and immutable.", sourceLink: "https://github.com/viixhal" },
-  { id: 2, type: "Web / E-Commerce", icon: "🛒", title: "E-Commerce Platform", summary: "An online store where all logic lives on the server — no platform fees, no single point of failure.", stack: ["Node.js", "React", "Express", "MongoDB"], details: "Product listings and payments recorded on database. Transparent, verifiable, and tamper-proof by design.", demoLink: "https://aveon.netlify.app", sourceLink: "https://github.com/viixhal" },
-  { id: 3, type: "AI / Computer Vision", icon: "🖼️", title: "Image Analyzer", summary: "AI model detecting digitally manipulated or AI-generated images — fighting synthetic misinformation.", stack: ["Python", "Machine Learning", "OpenCV", "Flask"], details: "Identifies statistical anomalies, edge inconsistencies, and compression artifacts typical of GAN-generated or Photoshopped content.", sourceLink: "https://github.com/viixhal" },
-  { id: 4, type: "IoT / Hardware", icon: "📡", title: "Smart Study Monitor", summary: "Arduino-powered IoT system tracking study environment and focus patterns in real time.", stack: ["Arduino", "Python", "IoT Sensors", "C++"], details: "Ambient light, motion, and proximity sensors detect attention lapses. LED/buzzer alerts and a Python dashboard for session data.", sourceLink: "https://github.com/viixhal" },
+  { id: 1, type: "Web / Full Stack", icon: "🔗", title: "Payment System", summary: "Payment gateway — no bank, no middleman. Transactions go directly via secure APIs.", stack: ["Node.js", "React", "Stripe", "Express"], details: "Built with secure API integration. Logic handles all payment flow — trustless, transparent, and immutable." },
+  { id: 2, type: "Web / E-Commerce", icon: "🛒", title: "E-Commerce Platform", summary: "An online store where all logic lives on the server — no platform fees, no single point of failure.", stack: ["Node.js", "React", "Express", "MongoDB"], details: "Product listings and payments recorded on database. Transparent, verifiable, and tamper-proof by design.", demoLink: "https://aveon.netlify.app" },
+  { id: 3, type: "AI / Computer Vision", icon: "🖼️", title: "Image Analyzer", summary: "AI model detecting digitally manipulated or AI-generated images — fighting synthetic misinformation.", stack: ["Python", "Machine Learning", "OpenCV", "Flask"], details: "Identifies statistical anomalies, edge inconsistencies, and compression artifacts typical of GAN-generated or Photoshopped content." },
+  { id: 4, type: "IoT / Hardware", icon: "📡", title: "Smart Study Monitor", summary: "Arduino-powered IoT system tracking study environment and focus patterns in real time.", stack: ["Arduino", "Python", "IoT Sensors", "C++"], details: "Ambient light, motion, and proximity sensors detect attention lapses. LED/buzzer alerts and a Python dashboard for session data." },
 ];
 
 const EDUCATION = [
@@ -997,22 +997,8 @@ export default function VishalrajPortfolio() {
                     {p.stack.slice(0, 3).map(item => <Tag key={item}>{item}</Tag>)}
                     {p.stack.length > 3 && <Tag>+{p.stack.length - 3}</Tag>}
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" }}>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      {p.demoLink && (
-                        <button style={{ ...S.btnW, padding: "6px 12px", fontSize: 11 }} onClick={(e) => { e.stopPropagation(); window.open(p.demoLink, '_blank'); }}>
-                          <ArrowUpRight style={{ width: 11, height: 11 }} /> Demo
-                        </button>
-                      )}
-                      {p.sourceLink && (
-                        <button style={{ ...S.btnG, padding: "6px 12px", fontSize: 11 }} onClick={(e) => { e.stopPropagation(); window.open(p.sourceLink, '_blank'); }}>
-                          <ExternalLink style={{ width: 11, height: 11 }} /> Code
-                        </button>
-                      )}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: T.textMuted }}>
-                      Details <ChevronRight style={{ width: 11, height: 11 }} />
-                    </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: T.textMuted }}>
+                    View Impact <ChevronRight style={{ width: 11, height: 11 }} />
                   </div>
                 </GlassCard>
               </motion.div>
@@ -1132,9 +1118,9 @@ export default function VishalrajPortfolio() {
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 24 }}>
                   {selProject.stack.map(item => <Tag key={item}>{item}</Tag>)}
                 </div>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 24 }}>
-                  {selProject.demoLink && <button style={S.btnW} onClick={() => window.open(selProject.demoLink, '_blank')}><ArrowUpRight style={{ width: 13, height: 13 }} /> Live Demo</button>}
-                  {selProject.sourceLink && <button style={S.btnG} onClick={() => window.open(selProject.sourceLink, '_blank')}><ExternalLink style={{ width: 13, height: 13 }} /> Source Code</button>}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button style={S.btnW} onClick={() => selProject.demoLink && window.open(selProject.demoLink, '_blank')}><ArrowUpRight style={{ width: 13, height: 13 }} /> Live Demo</button>
+                  <button style={S.btnG}><ExternalLink style={{ width: 13, height: 13 }} /> Source Code</button>
                 </div>
               </div>
             </motion.div>
