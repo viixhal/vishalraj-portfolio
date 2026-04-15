@@ -770,6 +770,7 @@ export default function VishalrajPortfolio() {
         @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.25} }
         @keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
         * { box-sizing: border-box; }
+        html, body, #root { margin: 0; padding: 0; width: 100%; height: 100%; background: #0a0a0a; }
         ::placeholder { color: rgba(255,255,255,0.22); }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
