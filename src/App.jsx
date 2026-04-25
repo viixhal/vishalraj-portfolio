@@ -1653,6 +1653,12 @@ export default function VishalrajPortfolio() {
           ))}
         </motion.div>
       </div>
+
+      {/* ══════════ OVERLAYS ══════════ */}
+      <AnimatePresence>
+        {showTerminal && <TerminalOverlay show={true} onClose={() => setShowTerminal(false)} scrollTo={scrollTo} />}
+      </AnimatePresence>
+      <ConfettiExplosion show={showConfetti} />
     </div>
   );
 }
