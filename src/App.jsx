@@ -1,5 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useMotionValue, useSpring, useTransform, useMotionTemplate } from "framer-motion";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform, useMotionTemplate, useScroll } from "framer-motion";
+
+// Shared AudioContext singleton — created once, reused forever
+let _audioCtx = null;
+function getAudioCtx() {
+  if (!_audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) _audioCtx = new AC();
+  }
+  return _audioCtx;
+}
 import {
   ArrowUpRight, Blocks, BookOpen, Briefcase, Code2, Download,
   ExternalLink, FolderKanban, GraduationCap, Home, Mail, Menu,
@@ -78,17 +88,17 @@ const S = {
 
 /* ─── SCROLL BAR ─────────────────────────────────────────────────────────────── */
 function ScrollProgress() {
-  const [prog, setProg] = useState(0);
+  const prog = useMotionValue(0);
   useEffect(() => {
     const fn = () => {
       const el = document.documentElement;
-      setProg((el.scrollTop / (el.scrollHeight - el.clientHeight)) || 0);
+      prog.set((el.scrollTop / (el.scrollHeight - el.clientHeight)) || 0);
     };
-    window.addEventListener("scroll", fn);
+    window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
   return (
-    <motion.div style={{ scaleX: prog, transformOrigin: "left", position: "fixed", top: 0, left: 0, right: 0, height: 2, background: T.white, zIndex: 9999 }} />
+    <motion.div style={{ scaleX: prog, transformOrigin: "left", position: "fixed", top: 0, left: 0, right: 0, height: 2, background: T.white, zIndex: 9999, willChange: "transform" }} />
   );
 }
 
@@ -138,8 +148,9 @@ function useMagnetic(strength = 0.38) {
 }
 
 /* ─── DOCK ICON ──────────────────────────────────────────────────────────────── */
-function DockIcon({ mouseX, icon: Icon, action, label }) {
+function DockIcon({ mouseX, icon: Icon, action, label, isActive, isMobile }) {
   const ref = useRef(null);
+  const [hovered, setHovered] = useState(false);
   const distance = useTransform(mouseX, val => {
     const b = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
     return val - b.x - b.width / 2;
@@ -147,36 +158,109 @@ function DockIcon({ mouseX, icon: Icon, action, label }) {
   const size = useSpring(useTransform(distance, [-80, 0, 80], [34, 54, 34]), { mass: 0.06, stiffness: 200, damping: 12 });
   const yOff = useSpring(useTransform(distance, [-80, 0, 80], [0, -12, 0]), { mass: 0.06, stiffness: 200, damping: 12 });
   const mag = useMagnetic(0.30);
+
+  const playSoftTick = useCallback(() => {
+    try {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      if (ctx.state === "suspended") ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(1000, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.02);
+      gain.gain.setValueAtTime(0.015, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.02);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.02);
+    } catch (e) { }
+  }, []);
+
   return (
-    <motion.button
-      ref={(el) => { ref.current = el; mag.ref.current = el; }}
-      onClick={action}
-      title={label}
-      onMouseMove={mag.onMove}
-      onMouseLeave={mag.onLeave}
-      whileTap={{ scale: 0.88 }}
-      whileHover={{ background: "rgba(255,255,255,0.18)" }}
-      style={{
-        width: size, height: size, y: yOff, x: mag.sx, flexShrink: 0,
-        borderRadius: "50%",
-        border: "1px solid rgba(255,255,255,0.22)",
-        background: "rgba(255,255,255,0.10)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.30), inset 0 -1px 0 rgba(0,0,0,0.15)",
-        display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-        position: "relative", overflow: "hidden",
-      }}
-    >
-      {/* Specular sheen */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", borderRadius: "50% 50% 0 0", background: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 100%)", pointerEvents: "none" }} />
-      <Icon style={{ width: "38%", height: "38%", color: "rgba(255,255,255,0.9)", position: "relative" }} />
-    </motion.button>
+
+    <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <AnimatePresence>
+        {hovered && !isMobile && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 5, scale: 0.8 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            style={{
+              position: "absolute",
+              top: -40,
+              background: "rgba(255,255,255,0.12)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              padding: "4px 12px",
+              borderRadius: 12,
+              fontSize: 11,
+              fontWeight: 600,
+              color: T.white,
+              pointerEvents: "none",
+              whiteSpace: "nowrap"
+            }}
+          >
+            {label}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <motion.button
+        ref={(el) => { ref.current = el; if (!isMobile) mag.ref.current = el; }}
+        onClick={action}
+        onMouseMove={!isMobile ? mag.onMove : undefined}
+        onMouseLeave={() => { if (!isMobile) mag.onLeave(); setHovered(false); }}
+        onMouseEnter={() => { setHovered(true); playSoftTick(); }}
+        whileTap={{ scale: 0.88 }}
+        whileHover={{ background: "rgba(255,255,255,0.18)" }}
+        style={{
+          width: isMobile ? 44 : size,
+          height: isMobile ? 44 : size,
+          y: isMobile ? 0 : yOff,
+          x: isMobile ? 0 : mag.sx,
+          flexShrink: 0,
+          borderRadius: "50%",
+          border: isActive ? "1px solid rgba(255,255,255,0.5)" : "1px solid rgba(255,255,255,0.22)",
+          background: isActive ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.10)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          boxShadow: isActive ? "0 0 15px rgba(255,255,255,0.2), inset 0 1px 0 rgba(255,255,255,0.30)" : "0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.30), inset 0 -1px 0 rgba(0,0,0,0.15)",
+          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+          position: "relative", overflow: "hidden",
+        }}
+      >
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", borderRadius: "50% 50% 0 0", background: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 100%)", pointerEvents: "none" }} />
+        <Icon style={{ width: "38%", height: "38%", color: isActive ? "#fff" : "rgba(255,255,255,0.9)", position: "relative" }} />
+      </motion.button>
+
+      {/* Active Dot */}
+      <AnimatePresence>
+        {isActive && (
+          <motion.div
+            layoutId="activeDockDot"
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0 }}
+            style={{
+              position: "absolute",
+              bottom: -6,
+              width: 4,
+              height: 4,
+              borderRadius: "50%",
+              background: T.white,
+              boxShadow: "0 0 8px rgba(255,255,255,0.8)"
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
-/* ─── AMBIENT ORBS ───────────────────────────────────────────────────────────── */
-function AmbientOrbs({ mouse }) {
+/* ─── AMBIENT ORBS — motion-value driven, zero React re-renders ─────────────── */
+function AmbientOrbs({ mouseX, mouseY }) {
   const orbs = [
     { top: -100, left: -100, size: 500, op: 0.055, dx: 1.5, dy: 1.0 },
     { top: "25%", right: -120, size: 380, op: 0.04, dx: -1.1, dy: 0.7 },
@@ -184,13 +268,17 @@ function AmbientOrbs({ mouse }) {
   ];
   return (
     <div style={{ pointerEvents: "none", position: "fixed", inset: 0, overflow: "hidden" }}>
-      {orbs.map((o, i) => (
-        <motion.div key={i}
-          animate={{ x: mouse.x * o.dx, y: mouse.y * o.dy }}
-          transition={{ type: "spring", stiffness: 38, damping: 22 }}
-          style={{ position: "absolute", top: o.top, bottom: o.bottom, left: o.left, right: o.right, width: o.size, height: o.size, borderRadius: "50%", background: `radial-gradient(circle, rgba(255,255,255,${o.op}) 0%, transparent 70%)` }}
-        />
-      ))}
+      {orbs.map((o, i) => {
+        const x = useTransform(mouseX, v => v * o.dx);
+        const y = useTransform(mouseY, v => v * o.dy);
+        const sx = useSpring(x, { stiffness: 38, damping: 22 });
+        const sy = useSpring(y, { stiffness: 38, damping: 22 });
+        return (
+          <motion.div key={i}
+            style={{ x: sx, y: sy, position: "absolute", top: o.top, bottom: o.bottom, left: o.left, right: o.right, width: o.size, height: o.size, borderRadius: "50%", background: `radial-gradient(circle, rgba(255,255,255,${o.op}) 0%, transparent 70%)` }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -283,7 +371,309 @@ function GlassCard({ children, style = {}, onClick, hover = true }) {
 
 function Tag({ children }) { return <span style={S.tag}>{children}</span>; }
 
-/* ─── DATA ───────────────────────────────────────────────────────────────────── */
+/* ─── SCROLL REVEAL — GPU-composited, zero re-renders ──────────────────────────
+   Uses useScroll on the element's own ref so the animation is driven purely by
+   scroll position via motion values, never touching React state.               */
+function ScrollReveal({ children, y = 22, delay = 0, style = {}, className }) {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["0 1", "0.25 1"],   // starts when bottom of element hits bottom of viewport
+  });
+  // Spring-smooth the raw scroll progress so it eases beautifully
+  const smooth = useSpring(scrollYProgress, { stiffness: 80, damping: 22, restDelta: 0.001 });
+  const opacity = useTransform(smooth, [0, 1], [0, 1]);
+  const translateY = useTransform(smooth, [0, 1], [y, 0]);
+  return (
+    <motion.div
+      ref={ref}
+      style={{ opacity, y: translateY, willChange: "transform, opacity", ...style }}
+      className={className}
+      transition={{ delay }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* ─── ANIMATED COUNTER — counts up when scrolled into view ────────────────── */
+function AnimatedCounter({ value, suffix = "", duration = 1400 }) {
+  const ref = useRef(null);
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const numericValue = parseInt(value, 10);
+  const isNumeric = !isNaN(numericValue);
+
+  useEffect(() => {
+    if (!isNumeric || hasAnimated || !ref.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setHasAnimated(true);
+        const start = performance.now();
+        const step = (now) => {
+          const progress = Math.min((now - start) / duration, 1);
+          // easeOutExpo for a satisfying deceleration
+          const eased = 1 - Math.pow(2, -10 * progress);
+          setCount(Math.floor(eased * numericValue));
+          if (progress < 1) requestAnimationFrame(step);
+          else setCount(numericValue);
+        };
+        requestAnimationFrame(step);
+        observer.disconnect();
+      }
+    }, { threshold: 0.5 });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [isNumeric, numericValue, hasAnimated, duration]);
+
+  return <span ref={ref}>{isNumeric ? `${count}${suffix}` : value}</span>;
+}
+
+/* ─── TERMINAL OVERLAY — press ` to toggle ────────────────────────────────── */
+function TerminalOverlay({ show, onClose, scrollTo }) {
+  const [lines, setLines] = useState([
+    { type: "system", text: "Welcome to VishalrajTSR/portfolio v1.0.0" },
+    { type: "system", text: 'Type "help" for available commands.' },
+  ]);
+  const [input, setInput] = useState("");
+  const inputRef = useRef(null);
+  const scrollRef = useRef(null);
+
+  const COMMANDS = {
+    help: () => [
+      "Available commands:",
+      "  about      — Who is Vishalraj?",
+      "  skills     — Technical proficiency",
+      "  projects   — Featured work",
+      "  education  — Academic background",
+      "  contact    — Get in touch",
+      "  goto <sec> — Navigate to a section",
+      "  whoami     — Current visitor info",
+      "  clear      — Clear terminal",
+      "  exit       — Close terminal",
+    ],
+    about: () => [
+      "┌─────────────────────────────────────┐",
+      "│  Vishalraj TSR                      │",
+      "│  Full Stack Developer & Data Analyst│",
+      "│  MCA @ SRM IST · Chennai, India     │",
+      "│  \"I ship real projects while I study │",
+      "│   — waiting to graduate is overrated\"│",
+      "└─────────────────────────────────────┘",
+    ],
+    skills: () => [
+      "Frontend:  React · JavaScript · HTML/CSS · Figma",
+      "Backend:   Node.js · Java · Python · Firebase",
+      "Data:      SQL · MongoDB · Tableau · AWS",
+      "Other:     Arduino/IoT · Kali Linux · Swift",
+    ],
+    projects: () => [
+      "[1] Payment System    — Secure payment gateway via APIs",
+      "[2] E-Commerce Store  — Decentralized product platform",
+      "[3] Image Analyzer    — AI detecting manipulated images",
+      "[4] Study Monitor     — IoT study environment tracker",
+    ],
+    education: () => [
+      "🎓 MCA — SRM IST VDP Campus (2024–2026, Current)",
+      "🎓 BCA Cloud & Security — Crescent University (2021–2024)",
+      "🎓 HSC Computer Science — DAV School (Graduated 2021)",
+    ],
+    contact: () => [
+      "📧 Email:    vkkmmg22@gmail.com",
+      "🔗 LinkedIn: linkedin.com/in/tsr-vishalraj-256106401",
+      "🐙 GitHub:   github.com/viixhal",
+    ],
+    whoami: () => [
+      `Visitor from ${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
+      `Browser: ${navigator.userAgent.split(') ')[0].split('(')[1] || 'Unknown'}`,
+      `Screen: ${window.innerWidth}×${window.innerHeight}`,
+      `Local time: ${new Date().toLocaleTimeString()}`,
+    ],
+  };
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const cmd = input.trim().toLowerCase();
+    if (!cmd) return;
+    const newLines = [{ type: "input", text: `$ ${cmd}` }];
+
+    if (cmd === "clear") {
+      setLines([{ type: "system", text: 'Terminal cleared. Type "help" for commands.' }]);
+      setInput("");
+      return;
+    }
+    if (cmd === "exit") { onClose(); setInput(""); return; }
+    if (cmd.startsWith("goto ")) {
+      const target = cmd.slice(5).trim();
+      const valid = ["home", "skills", "projects", "education", "contact"];
+      if (valid.includes(target)) {
+        newLines.push({ type: "system", text: `Navigating to ${target}...` });
+        setTimeout(() => { scrollTo(target.charAt(0).toUpperCase() + target.slice(1)); onClose(); }, 500);
+      } else {
+        newLines.push({ type: "error", text: `Section "${target}" not found. Try: ${valid.join(", ")}` });
+      }
+    } else if (COMMANDS[cmd]) {
+      COMMANDS[cmd]().forEach(t => newLines.push({ type: "output", text: t }));
+    } else {
+      newLines.push({ type: "error", text: `Command not found: ${cmd}. Type "help" for available commands.` });
+    }
+    setLines(prev => [...prev, ...newLines]);
+    setInput("");
+  }
+
+  useEffect(() => {
+    if (show && inputRef.current) inputRef.current.focus();
+  }, [show]);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [lines]);
+
+  if (!show) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 30, scale: 0.95 }} animate={{ y: 0, scale: 1 }} exit={{ y: 20, scale: 0.97 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        onClick={e => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 640, maxHeight: "70vh", borderRadius: 16, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(15,15,15,0.95)", boxShadow: "0 40px 120px rgba(0,0,0,0.8)", overflow: "hidden", display: "flex", flexDirection: "column" }}
+      >
+        {/* Title bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+          <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f57", cursor: "pointer" }} onClick={onClose} />
+          <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#ffbd2e" }} />
+          <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#27c93f" }} />
+          <span style={{ flex: 1, textAlign: "center", fontSize: 11, color: T.textMuted, fontFamily: "monospace" }}>vishalraj@portfolio ~ zsh</span>
+        </div>
+        {/* Output */}
+        <div ref={scrollRef} style={{ flex: 1, overflow: "auto", padding: 16, fontFamily: "'SF Mono', 'Fira Code', monospace", fontSize: 12.5, lineHeight: 1.7 }}>
+          {lines.map((line, i) => (
+            <div key={i} style={{ color: line.type === "input" ? "#27c93f" : line.type === "error" ? "#ff5f57" : line.type === "system" ? T.textMuted : "rgba(255,255,255,0.85)", whiteSpace: "pre-wrap" }}>
+              {line.text}
+            </div>
+          ))}
+        </div>
+        {/* Input */}
+        <form onSubmit={handleSubmit} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          <span style={{ color: "#27c93f", fontFamily: "monospace", fontSize: 13, fontWeight: 600 }}>$</span>
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="Type a command..."
+            style={{ flex: 1, background: "transparent", border: "none", color: T.textPrimary, fontFamily: "'SF Mono', 'Fira Code', monospace", fontSize: 13, outline: "none" }}
+          />
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ─── KONAMI CODE CONFETTI ────────────────────────────────────────────────── */
+function useKonamiCode(callback) {
+  const sequence = useRef([]);
+  const KONAMI = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
+  useEffect(() => {
+    const handler = (e) => {
+      sequence.current.push(e.key);
+      if (sequence.current.length > KONAMI.length) sequence.current.shift();
+      if (JSON.stringify(sequence.current) === JSON.stringify(KONAMI)) {
+        callback();
+        sequence.current = [];
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [callback]);
+}
+
+function ConfettiExplosion({ show }) {
+  if (!show) return null;
+  const particles = useMemo(() => Array.from({ length: 60 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    color: ["#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff", "#ff8cc8", "#a855f7"][i % 6],
+    delay: Math.random() * 0.3,
+    angle: Math.random() * 360,
+    distance: 200 + Math.random() * 400,
+    size: 4 + Math.random() * 6,
+  })), []);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 99999, pointerEvents: "none", overflow: "hidden" }}>
+      {particles.map(p => (
+        <motion.div
+          key={p.id}
+          initial={{ x: "50vw", y: "50vh", scale: 1, opacity: 1 }}
+          animate={{
+            x: `calc(50vw + ${Math.cos(p.angle * Math.PI / 180) * p.distance}px)`,
+            y: `calc(50vh + ${Math.sin(p.angle * Math.PI / 180) * p.distance}px)`,
+            scale: 0,
+            opacity: 0,
+            rotate: Math.random() * 720,
+          }}
+          transition={{ duration: 1.2 + Math.random() * 0.5, delay: p.delay, ease: "easeOut" }}
+          style={{
+            position: "absolute",
+            width: p.size, height: p.size,
+            borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+            background: p.color,
+          }}
+        />
+      ))}
+      {/* Message */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.5, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+        style={{
+          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+          background: "rgba(15,15,15,0.9)", backdropFilter: "blur(20px)",
+          border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20,
+          padding: "20px 36px", textAlign: "center", pointerEvents: "auto",
+        }}
+      >
+        <div style={{ fontSize: 28, marginBottom: 8 }}>🎉</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary, marginBottom: 4 }}>You found the secret!</div>
+        <div style={{ fontSize: 11, color: T.textMuted }}>Fun fact: This entire portfolio is a single React component.</div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ─── TIME-AWARE GREETING ─────────────────────────────────────────────────── */
+function getTimeGreeting() {
+  const h = new Date().getHours();
+  if (h < 5) return { text: "Burning the midnight oil?", emoji: "🌙" };
+  if (h < 12) return { text: "Good morning", emoji: "☀️" };
+  if (h < 17) return { text: "Good afternoon", emoji: "🌤️" };
+  if (h < 21) return { text: "Good evening", emoji: "🌅" };
+  return { text: "Working late?", emoji: "🌙" };
+}
+
+/* ─── DYNAMIC FAVICON ─────────────────────────────────────────────────────── */
+function useDynamicFavicon(activeSection) {
+  useEffect(() => {
+    const favicons = { Home: "🏠", Skills: "⚡", Projects: "💼", Education: "🎓", Contact: "✉️" };
+    const emoji = favicons[activeSection] || "🏠";
+    const canvas = document.createElement("canvas");
+    canvas.width = 32; canvas.height = 32;
+    const ctx = canvas.getContext("2d");
+    ctx.font = "28px serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(emoji, 16, 18);
+    let link = document.querySelector("link[rel='icon']");
+    if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+    link.href = canvas.toDataURL();
+  }, [activeSection]);
+}
+
 const TYPED = [
   "Building digital experiences.",
   "Full Stack · Data Analyst.",
@@ -453,88 +843,45 @@ function MagNavBtn({ item, active, btnRefs, onClick }) {
   );
 }
 
-/* ── View Projects — shimmer sweep + arrow slides right ──────────────────── */
+/* ── View Projects — minimal interaction ─────────────────────────────────── */
 function ViewProjectsBtn({ onClick }) {
-  const [hovered, setHovered] = useState(false);
-  const mag = useMagnetic(0.42);
   return (
     <motion.button
-      ref={mag.ref}
       onClick={onClick}
-      onMouseMove={mag.onMove}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); mag.onLeave(); }}
-      whileTap={{ scale: 0.95 }}
-      style={{ ...S.btnW, position: "relative", overflow: "hidden", x: mag.sx, y: mag.sy }}
+      whileHover={{ opacity: 0.9, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      style={{ ...S.btnW, transition: "background 0.2s, border-color 0.2s" }}
     >
-      {/* Shimmer sweep */}
-      <motion.div
-        animate={hovered ? { x: ["−100%", "200%"] } : { x: "-100%" }}
-        transition={{ duration: 0.55, ease: "easeInOut" }}
-        style={{ position: "absolute", top: 0, left: 0, width: "60%", height: "100%", background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)", pointerEvents: "none", transform: "skewX(-15deg)" }}
-      />
-      <span style={{ position: "relative", zIndex: 1 }}>View Projects</span>
-      <motion.span animate={{ x: hovered ? 5 : 0 }} transition={{ type: "spring", stiffness: 300, damping: 18 }} style={{ position: "relative", zIndex: 1, display: "flex" }}>
-        <ChevronRight style={{ width: 14, height: 14 }} />
-      </motion.span>
+      View Projects <ChevronRight style={{ width: 14, height: 14 }} />
     </motion.button>
   );
 }
 
-/* ── Contact Me — ripple ring fires on click ─────────────────────────────── */
+/* ── Contact Me — minimal interaction ────────────────────────────────────── */
 function ContactBtn({ onClick }) {
-  const [ripples, setRipples] = useState([]);
-  const mag = useMagnetic(0.42);
-  function fire() {
-    const id = Date.now();
-    setRipples(r => [...r, id]);
-    setTimeout(() => setRipples(r => r.filter(x => x !== id)), 700);
-    onClick();
-  }
   return (
     <motion.button
-      ref={mag.ref}
-      onClick={fire}
-      onMouseMove={mag.onMove}
-      onMouseLeave={mag.onLeave}
-      whileHover={{ background: "rgba(255,255,255,0.13)", borderColor: "rgba(255,255,255,0.28)" }}
-      whileTap={{ scale: 0.95 }}
-      style={{ ...S.btnG, position: "relative", overflow: "visible", x: mag.sx, y: mag.sy }}
+      onClick={onClick}
+      whileHover={{ background: "rgba(255,255,255,0.13)", borderColor: "rgba(255,255,255,0.28)", scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      style={{ ...S.btnG, transition: "background 0.2s, border-color 0.2s" }}
     >
-      {/* Ripple rings */}
-      {ripples.map(id => (
-        <motion.span key={id}
-          initial={{ scale: 0.6, opacity: 0.7 }}
-          animate={{ scale: 2.6, opacity: 0 }}
-          transition={{ duration: 0.65, ease: "easeOut" }}
-          style={{ position: "absolute", inset: 0, borderRadius: T.pill, border: "1.5px solid rgba(255,255,255,0.55)", pointerEvents: "none" }}
-        />
-      ))}
-      {/* Pulsing dot */}
-      <motion.span
-        animate={{ scale: [1, 1.4, 1], opacity: [1, 0.4, 1] }}
-        transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
-        style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(255,255,255,0.7)", flexShrink: 0 }}
-      />
       <span>Contact Me</span>
       <Mail style={{ width: 13, height: 13 }} />
     </motion.button>
   );
 }
 
-/* ── Resume — download arrow bounces down on hover ───────────────────────── */
+/* ── Resume — minimal interaction ────────────────────────────────────────── */
 function ResumeBtn() {
   const [hovered, setHovered] = useState(false);
-  const mag = useMagnetic(0.42);
   return (
     <motion.button
-      ref={mag.ref}
-      onMouseMove={mag.onMove}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); mag.onLeave(); }}
+      onMouseLeave={() => setHovered(false)}
       whileTap={{ scale: 0.95 }}
       animate={hovered ? { background: "rgba(255,255,255,0.13)", borderColor: "rgba(255,255,255,0.30)" } : {}}
-      style={{ ...S.btnG, position: "relative", x: mag.sx, y: mag.sy }}
+      style={{ ...S.btnG, position: "relative" }}
     >
       <motion.span
         animate={hovered
@@ -615,44 +962,35 @@ function CloseBtn({ onClick, style: extraStyle = {} }) {
     </motion.button>
   );
 }
-
-/* ── MagSendBtn — Send Email with magnetic pull ──────────────────────────── */
+/* ── MagSendBtn — Send Email with minimal interaction ──────────────────────────── */
 function MagSendBtn() {
-  const mag = useMagnetic(0.42);
   return (
     <motion.button
-      ref={mag.ref}
-      onMouseMove={mag.onMove}
-      onMouseLeave={mag.onLeave}
-      whileHover={{ opacity: 0.9, scale: 1.04 }}
-      whileTap={{ scale: 0.96 }}
+      whileHover={{ opacity: 0.9, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => window.open("https://mail.google.com/mail/?view=cm&to=vkkmmg22@gmail.com", "_blank")}
-      style={{ ...S.btnW, x: mag.sx, y: mag.sy }}
+      style={{ ...S.btnW }}
     >
       <Mail style={{ width: 13, height: 13 }} /> Send Email
     </motion.button>
   );
 }
 
-/* ── MagSocialPill — social link pill with magnetic pull ─────────────────── */
+/* ── MagSocialPill — social link pill with minimal interaction ─────────────────── */
 function MagSocialPill({ label, href }) {
-  const mag = useMagnetic(0.40);
   return (
     <motion.a
-      ref={mag.ref}
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      onMouseMove={mag.onMove}
-      onMouseLeave={mag.onLeave}
-      whileHover={{ scale: 1.08, background: "rgba(255,255,255,0.12)", borderColor: "rgba(255,255,255,0.28)" }}
-      whileTap={{ scale: 0.94 }}
+      whileHover={{ scale: 1.02, background: "rgba(255,255,255,0.08)" }}
+      whileTap={{ scale: 0.98 }}
       style={{
         borderRadius: T.pill, border: "1px solid rgba(255,255,255,0.11)",
         background: "rgba(255,255,255,0.05)", padding: "6px 15px",
         fontSize: 11, color: T.textSub, cursor: "pointer",
         textDecoration: "none", display: "inline-block",
-        x: mag.sx, y: mag.sy,
+        transition: "background 0.15s, border-color 0.15s"
       }}
     >
       {label}
@@ -670,7 +1008,7 @@ function NoiseFilter() {
   );
 }
 
-const TECH_MARQUEE_ITEMS = ["REACT", "NODE.JS", "MONGODB", "FIGMA", "TYPESCRIPT", "PYTHON", "AWS", "MACHINE LEARNING", "WEB3.JS", "ARDUINO", "TABLEAU", "POWER BI", "FIREBASE", "KEYLOGGER", "KALI LINUX", "CLOUD FIRESTORE", "SQL", "PL/SQL", "REACT NATIVE", "SWIFT"];
+const TECH_MARQUEE_ITEMS = ["REACT", "NODE.JS", "MONGODB", "FIGMA", "TYPESCRIPT", "PYTHON", "AWS", "WEB3.JS", "ARDUINO", "TABLEAU", "POWER BI", "FIREBASE", "KALI LINUX", "CLOUD FIRESTORE", "SQL", "PL/SQL", "REACT NATIVE", "SWIFT"];
 
 function TechMarquee({ onClick }) {
   return (
@@ -692,11 +1030,11 @@ function TechMarquee({ onClick }) {
 /* ─── SECTION HEADER ─────────────────────────────────────────────────────────── */
 function SectionHeader({ sub, title }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }} style={{ textAlign: "center", marginBottom: 36 }}>
+    <ScrollReveal y={14} style={{ textAlign: "center", marginBottom: 36 }}>
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: T.textMuted, marginBottom: 8 }}>{sub}</div>
       <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 700, color: T.textPrimary, letterSpacing: "-0.02em", margin: 0 }}>{title}</h2>
       <div style={{ width: 40, height: 1, background: "rgba(255,255,255,0.3)", margin: "14px auto 0" }} />
-    </motion.div>
+    </ScrollReveal>
   );
 }
 
@@ -709,17 +1047,48 @@ export default function VishalrajPortfolio() {
   const [selProject, setSelProject] = useState(null);
   const [showTools, setShowTools] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
-  const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
   const [now, setNow] = useState(new Date());
   const dockMouseX = useMotionValue(Infinity);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isScrollingDown, setIsScrollingDown] = useState(false);
+  const lastScrollY = useRef(0);
+  const rafScrollRef = useRef(null);
+  const rafNavRef = useRef(null);
+  const [showTerminal, setShowTerminal] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const greeting = useMemo(() => getTimeGreeting(), []);
 
-  // Global subtle click sound (Apple/Premium tick)
+  // Dynamic favicon based on active section
+  useDynamicFavicon(activeNav);
+
+  // Konami code → confetti
+  useKonamiCode(useCallback(() => {
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 3000);
+  }, []));
+
+  // Terminal toggle on backtick key
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === '`' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setShowTerminal(prev => !prev);
+      }
+      if (e.key === 'Escape' && showTerminal) setShowTerminal(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showTerminal]);
+
+  // Global subtle click sound — uses shared AudioContext singleton
   useEffect(() => {
     const playTick = () => {
       try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
+        const ctx = getAudioCtx();
+        if (!ctx) return;
+        if (ctx.state === "suspended") ctx.resume();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
@@ -731,15 +1100,56 @@ export default function VishalrajPortfolio() {
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
         osc.start();
         osc.stop(ctx.currentTime + 0.04);
-      } catch (e) {
-        // Ignore failures, like before the user interacts
-      }
+      } catch (e) { }
     };
     window.addEventListener("mousedown", playTick);
     return () => window.removeEventListener("mousedown", playTick);
   }, []);
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    const handleScroll = () => {
+      // RAF-throttle: only process once per animation frame
+      if (rafScrollRef.current) return;
+      rafScrollRef.current = requestAnimationFrame(() => {
+        rafScrollRef.current = null;
+        const currentScrollY = window.scrollY;
+        setIsScrollingDown(currentScrollY > lastScrollY.current && currentScrollY > 50);
+        lastScrollY.current = currentScrollY;
+      });
+
+      // Scroll Spy — throttled separately
+      if (rafNavRef.current) return;
+      rafNavRef.current = requestAnimationFrame(() => {
+        rafNavRef.current = null;
+        const sections = ["home", "skills", "projects", "education", "contact"];
+        let current = "Home";
+        for (const section of sections) {
+          const el = document.getElementById(section);
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            if (rect.top <= window.innerHeight / 2 && rect.bottom >= window.innerHeight * 0.2) {
+              current = section.charAt(0).toUpperCase() + section.slice(1);
+            }
+          }
+        }
+        setActiveNav(current);
+      });
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+      window.removeEventListener("scroll", handleScroll);
+      if (rafScrollRef.current) cancelAnimationFrame(rafScrollRef.current);
+      if (rafNavRef.current) cancelAnimationFrame(rafNavRef.current);
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return PROJECTS;
@@ -762,7 +1172,10 @@ export default function VishalrajPortfolio() {
 
   return (
     <div
-      onMouseMove={e => setMouse({ x: (e.clientX / window.innerWidth) * 80, y: (e.clientY / window.innerHeight) * 60 })}
+      onMouseMove={e => {
+        mouseX.set((e.clientX / window.innerWidth) * 80);
+        mouseY.set((e.clientY / window.innerHeight) * 60);
+      }}
       style={{ minHeight: "100vh", background: T.bg, color: T.textPrimary, overflowX: "hidden", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
     >
       <style>{`
@@ -799,7 +1212,7 @@ export default function VishalrajPortfolio() {
 
       <NoiseFilter />
       <ScrollProgress />
-      <AmbientOrbs mouse={mouse} />
+      <AmbientOrbs mouseX={mouseX} mouseY={mouseY} />
 
       {/* Subtle grid */}
       <div style={{
@@ -810,37 +1223,25 @@ export default function VishalrajPortfolio() {
 
       <div style={{ position: "relative", maxWidth: 1200, margin: "0 auto", padding: "20px 24px" }}>
 
-        {/* ══════════ NAV ══════════ */}
-        <motion.nav
-          initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-          style={{ position: "sticky", top: 16, zIndex: 100, marginBottom: 28, borderRadius: T.radius, border: `1px solid rgba(255,255,255,0.10)`, background: T.navBg, backdropFilter: "blur(30px)", WebkitBackdropFilter: "blur(30px)", padding: "12px 20px", boxShadow: "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)" }}
-        >
-          <div className="mobile-nav" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-            {/* Logo */}
-            <button className="mobile-nav-logo" onClick={() => scrollTo("Home")} style={{ display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-              <motion.div whileHover={{ scale: 1.07 }}
-                style={{ width: 40, height: 40, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.22)", overflow: "hidden", flexShrink: 0, boxShadow: "0 0 0 1px rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.20)" }}>
-                <img src="/profile.jpg" alt="Vishalraj" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", filter: "grayscale(15%) contrast(1.05)" }} />
-              </motion.div>
-              <div style={{ textAlign: "left" }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: T.textPrimary, letterSpacing: "-0.01em" }}>Vishalraj TSR</div>
-                <div style={{ fontSize: 11, color: T.textMuted }}>Full Stack · Data Analyst</div>
-              </div>
-            </button>
 
-            {/* Desktop links — liquid glass cursor-tracking pill */}
-            <NavLinks NAV={NAV} activeNav={activeNav} scrollTo={scrollTo} />
-
-          </div>
-        </motion.nav>
 
         {/* ══════════ HERO ══════════ */}
         <section id="home" className="responsive-grid" style={{ display: "grid", gap: 14, gridTemplateColumns: "minmax(0,1.5fr) minmax(0,0.85fr)", marginBottom: 6 }}>
           {/* Main hero card */}
           <GlassCard hover={false} className="mobile-hero-card" style={{ padding: "36px 40px" }}>
+            {/* Time-aware greeting */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+              style={{ fontSize: 12, color: T.textMuted, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <span>{greeting.emoji}</span> {greeting.text} — thanks for visiting.
+            </motion.div>
+
             {/* Available badge */}
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: T.pill, border: "1px solid rgba(255,255,255,0.13)", background: "rgba(255,255,255,0.06)", padding: "5px 14px", fontSize: 11, color: T.textSub, marginBottom: 28 }}>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              whileHover={{ scale: 1.04, borderColor: "rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.10)" }}
+              whileTap={{ scale: 0.97 }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: T.pill, border: "1px solid rgba(255,255,255,0.13)", background: "rgba(255,255,255,0.06)", padding: "5px 14px", fontSize: 11, color: T.textSub, marginBottom: 28, cursor: "default", transition: "background 0.2s, border-color 0.2s" }}
+            >
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.white, animation: "pulse-dot 2s infinite" }} />
               Available for collaboration
             </motion.div>
@@ -897,12 +1298,14 @@ export default function VishalrajPortfolio() {
               </motion.div>
             </div>
 
-            {/* Stats */}
+            {/* Stats — animated counters */}
             <motion.div className="mobile-stats" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
               style={{ marginTop: 28, display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
-              {[{ v: "4+", l: "Projects" }, { v: "Full-Stack", l: "Focus" }, { v: "12+", l: "Technologies" }, { v: "Open", l: "Status" }].map(s => (
+              {[{ v: 4, suffix: "+", l: "Projects" }, { v: "Full-Stack", l: "Focus" }, { v: 12, suffix: "+", l: "Technologies" }, { v: "Open", l: "Status" }].map(s => (
                 <div key={s.l} style={{ borderRadius: T.radiusSm, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", padding: "14px 8px", textAlign: "center" }}>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: T.textPrimary }}>{s.v}</div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: T.textPrimary }}>
+                    {typeof s.v === 'number' ? <AnimatedCounter value={s.v} suffix={s.suffix || ""} /> : s.v}
+                  </div>
                   <div style={{ fontSize: 10, color: T.textMuted, marginTop: 3 }}>{s.l}</div>
                 </div>
               ))}
@@ -957,7 +1360,7 @@ export default function VishalrajPortfolio() {
             {SKILLS.map((sk, i) => {
               const Icon = sk.icon;
               return (
-                <motion.div key={sk.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ delay: i * 0.08 }}>
+                <ScrollReveal key={sk.title} y={16} delay={i * 0.06}>
                   <GlassCard style={{ padding: 24, textAlign: "center", height: "100%" }}>
                     <div style={{ width: 48, height: 48, borderRadius: 16, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
                       <Icon style={{ width: 20, height: 20, color: T.textPrimary }} />
@@ -968,7 +1371,7 @@ export default function VishalrajPortfolio() {
                       {sk.items.map(item => <Tag key={item}>{item}</Tag>)}
                     </div>
                   </GlassCard>
-                </motion.div>
+                </ScrollReveal>
               );
             })}
           </div>
@@ -984,7 +1387,7 @@ export default function VishalrajPortfolio() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
             {filtered.map((p, i) => (
-              <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ delay: i * 0.07 }}>
+              <ScrollReveal key={p.id} y={16} delay={i * 0.05}>
                 <GlassCard onClick={() => setSelProject(p)} style={{ padding: 24, cursor: "pointer", height: "100%" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                     <div style={{ display: "inline-flex", borderRadius: T.pill, border: "1px solid rgba(255,255,255,0.11)", background: "rgba(255,255,255,0.05)", padding: "4px 12px", fontSize: 10, color: T.textSub }}>
@@ -1002,7 +1405,7 @@ export default function VishalrajPortfolio() {
                     View Impact <ChevronRight style={{ width: 11, height: 11 }} />
                   </div>
                 </GlassCard>
-              </motion.div>
+              </ScrollReveal>
             ))}
           </div>
         </section>
@@ -1012,7 +1415,7 @@ export default function VishalrajPortfolio() {
           <SectionHeader sub="Academic Foundation" title="Education" />
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {EDUCATION.map((e, i) => (
-              <motion.div key={e.degree} initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ delay: i * 0.08 }}>
+              <ScrollReveal key={e.degree} y={12} delay={i * 0.07}>
                 <GlassCard style={{ padding: 20 }}>
                   <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flex: 1, minWidth: 220 }}>
@@ -1030,14 +1433,14 @@ export default function VishalrajPortfolio() {
                     </div>
                   </div>
                 </GlassCard>
-              </motion.div>
+              </ScrollReveal>
             ))}
           </div>
         </section>
 
         {/* ══════════ CONTACT ══════════ */}
         <section id="contact" style={{ paddingTop: 72, paddingBottom: 130 }}>
-          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }}>
+          <ScrollReveal y={16}>
             <GlassCard hover={false} className="mobile-hero-card" style={{ padding: "44px 48px" }}>
               <div className="responsive-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(0,0.8fr)", gap: 32 }}>
                 <div>
@@ -1089,7 +1492,7 @@ export default function VishalrajPortfolio() {
                 </div>
               </div>
             </GlassCard>
-          </motion.div>
+          </ScrollReveal>
         </section>
       </div>
 
@@ -1149,7 +1552,7 @@ export default function VishalrajPortfolio() {
                   </div>
                   <CloseBtn onClick={() => setShowTools(false)} />
                 </div>
-                
+
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 24 }}>
                   {TECH_MARQUEE_ITEMS.map(item => (
                     <span key={item} style={{ padding: "8px 16px", borderRadius: T.pill, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)", fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 600, color: T.textSub, letterSpacing: "0.05em" }}>{item}</span>
@@ -1204,12 +1607,14 @@ export default function VishalrajPortfolio() {
 
       {/* ══════════ DOCK ══════════ */}
       <div
-        style={{ position: "fixed", bottom: 22, left: "50%", transform: "translateX(-50%)", zIndex: 150 }}
+        style={{ position: "fixed", bottom: 22, left: "50%", transform: "translateX(-50%)", zIndex: 150, willChange: "transform" }}
         onMouseMove={e => dockMouseX.set(e.clientX)}
         onMouseLeave={() => dockMouseX.set(Infinity)}
       >
         <motion.div
-          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5 }}
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: isScrollingDown ? 150 : 0, opacity: isScrollingDown ? 0 : 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 20 }}
           style={{
             display: "flex",
             alignItems: "flex-end",
@@ -1244,7 +1649,7 @@ export default function VishalrajPortfolio() {
             pointerEvents: "none",
           }} />
           {dockItems.map(item => (
-            <DockIcon key={item.label} mouseX={dockMouseX} icon={item.icon} action={item.action} label={item.label} />
+            <DockIcon key={item.label} mouseX={dockMouseX} icon={item.icon} action={item.action} label={item.label} isActive={activeNav === item.label} isMobile={isMobile} />
           ))}
         </motion.div>
       </div>
