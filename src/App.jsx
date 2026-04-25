@@ -1069,10 +1069,10 @@ export default function VishalrajPortfolio() {
     setTimeout(() => setShowConfetti(false), 3000);
   }, []));
 
-  // Terminal toggle on backtick key
+  // Terminal toggle on Ctrl+K / Cmd+K
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === '`' && !e.ctrlKey && !e.metaKey) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setShowTerminal(prev => !prev);
       }
@@ -1274,7 +1274,11 @@ export default function VishalrajPortfolio() {
 
               {/* Name + bio */}
               <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} style={{ flex: 1, minWidth: 200 }}>
-                <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "clamp(30px, 5vw, 56px)", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.05, margin: 0, color: T.textPrimary }}>
+                <h1 
+                  onClick={() => setShowTerminal(true)}
+                  style={{ fontFamily: "'Outfit', sans-serif", fontSize: "clamp(30px, 5vw, 56px)", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.05, margin: 0, color: T.textPrimary, cursor: "pointer" }}
+                  title="Open Terminal (Ctrl+K)"
+                >
                   VISHALRAJ <span style={{ color: "rgba(255,255,255,0.32)" }}>TSR</span>
                 </h1>
                 <div style={{ marginTop: 10, fontSize: 13, minHeight: 20 }}>
