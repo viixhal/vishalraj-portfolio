@@ -1073,7 +1073,7 @@ export default function VishalrajPortfolio() {
                       { l: "Availability", v: "Immediate", href: null },
                     ].map(row => (
                       <div key={row.l}
-                        onClick={() => row.href && (window.location.href = row.href)}
+                        onClick={() => row.href && window.open(row.href, '_blank', 'noopener,noreferrer')}
                         style={{ borderRadius: T.radiusSm, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)", padding: "9px 12px", cursor: row.href ? "pointer" : "default", transition: "background 0.15s" }}
                         onMouseEnter={e => { if (row.href) e.currentTarget.style.background = "rgba(255,255,255,0.07)"; }}
                         onMouseLeave={e => { if (row.href) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
