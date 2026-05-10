@@ -646,6 +646,165 @@ function ConfettiExplosion({ show }) {
   );
 }
 
+/* ─── LIVE DEMO TOAST — shown on page load ──────────────────────────────── */
+function LiveDemoToast({ show, onClose }) {
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          id="live-demo-toast"
+          initial={{ opacity: 0, y: 40, scale: 0.92 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 24, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 26, delay: 0.8 }}
+          style={{
+            position: "fixed",
+            bottom: 96,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 9990,
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            padding: "14px 22px",
+            borderRadius: 9999,
+            border: "1px solid rgba(255,255,255,0.18)",
+            background: "rgba(18,18,18,0.88)",
+            backdropFilter: "blur(32px)",
+            WebkitBackdropFilter: "blur(32px)",
+            boxShadow: "0 12px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12)",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+          onClick={onClose}
+        >
+          {/* Pulsing green dot */}
+          <span style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e", display: "block", animation: "pulse-dot 1.8s infinite" }} />
+            <motion.span
+              animate={{ scale: [1, 1.9], opacity: [0.5, 0] }}
+              transition={{ repeat: Infinity, duration: 1.6, ease: "easeOut" }}
+              style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "2px solid #22c55e" }}
+            />
+          </span>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#f0f0f0", letterSpacing: "-0.01em" }}>
+              Live Demos Are Working
+            </span>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
+              Click any project → try the live demo
+            </span>
+          </div>
+
+          <span style={{ marginLeft: 6, fontSize: 11, color: "rgba(255,255,255,0.28)", userSelect: "none" }}>✕</span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ─── LIVE DEMO BANNER — end-of-page section ─────────────────────────────── */
+function LiveDemoBanner({ onViewDemo }) {
+  return (
+    <ScrollReveal y={18} style={{ marginTop: 56 }}>
+      <div
+        id="live-demo-banner"
+        style={{
+          borderRadius: "2rem",
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: "rgba(255,255,255,0.04)",
+          backdropFilter: "blur(28px)",
+          WebkitBackdropFilter: "blur(28px)",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)",
+          padding: "36px 40px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 24,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Subtle glow blob */}
+        <div style={{ position: "absolute", top: -60, right: -60, width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(34,197,94,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          {/* Animated status orb */}
+          <div style={{ position: "relative", width: 48, height: 48, borderRadius: "50%", border: "1px solid rgba(34,197,94,0.25)", background: "rgba(34,197,94,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{ fontSize: 20 }}>🚀</span>
+            <motion.div
+              animate={{ scale: [1, 1.5], opacity: [0.4, 0] }}
+              transition={{ repeat: Infinity, duration: 2.2, ease: "easeOut" }}
+              style={{ position: "absolute", inset: -4, borderRadius: "50%", border: "1px solid rgba(34,197,94,0.35)" }}
+            />
+          </div>
+
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block", animation: "pulse-dot 1.8s infinite", flexShrink: 0 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(34,197,94,0.85)" }}>All Systems Operational</span>
+            </div>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "clamp(18px, 3vw, 26px)", fontWeight: 700, color: "#f0f0f0", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+              Live Demos Are Working
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", marginTop: 6, lineHeight: 1.6 }}>
+              E-Commerce Platform is deployed and fully interactive — no sign-up required.
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <motion.button
+            id="try-live-demo-btn"
+            onClick={onViewDemo}
+            whileHover={{ opacity: 0.9, scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            style={{
+              borderRadius: 9999,
+              background: "#f0f0f0",
+              color: "#0a0a0a",
+              border: "none",
+              padding: "11px 24px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+            }}
+          >
+            <ArrowUpRight style={{ width: 14, height: 14 }} /> Try Live Demo
+          </motion.button>
+          <motion.button
+            id="view-projects-demo-btn"
+            onClick={onViewDemo}
+            whileHover={{ background: "rgba(255,255,255,0.12)", borderColor: "rgba(255,255,255,0.28)", scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            style={{
+              borderRadius: 9999,
+              border: "1px solid rgba(255,255,255,0.17)",
+              background: "rgba(255,255,255,0.07)",
+              color: "#f0f0f0",
+              padding: "11px 24px",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <FolderKanban style={{ width: 13, height: 13 }} /> View Projects
+          </motion.button>
+        </div>
+      </div>
+    </ScrollReveal>
+  );
+}
+
 /* ─── TIME-AWARE GREETING ─────────────────────────────────────────────────── */
 function getTimeGreeting() {
   const h = new Date().getHours();
@@ -1058,6 +1217,7 @@ export default function VishalrajPortfolio() {
   const rafNavRef = useRef(null);
   const [showTerminal, setShowTerminal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showLiveDemoToast, setShowLiveDemoToast] = useState(false);
   const greeting = useMemo(() => getTimeGreeting(), []);
 
   // Dynamic favicon based on active section
@@ -1068,6 +1228,13 @@ export default function VishalrajPortfolio() {
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 3000);
   }, []));
+
+  // Show Live Demo toast on page load, auto-dismiss after 6 seconds
+  useEffect(() => {
+    const t = setTimeout(() => setShowLiveDemoToast(true), 1200);
+    const d = setTimeout(() => setShowLiveDemoToast(false), 7500);
+    return () => { clearTimeout(t); clearTimeout(d); };
+  }, []);
 
   // Terminal toggle on Ctrl+K / Cmd+K
   useEffect(() => {
@@ -1498,6 +1665,13 @@ export default function VishalrajPortfolio() {
             </GlassCard>
           </ScrollReveal>
         </section>
+
+        {/* ══════════ LIVE DEMO BANNER ══════════ */}
+        <LiveDemoBanner onViewDemo={() => {
+          const p = PROJECTS.find(pr => pr.demoLink);
+          if (p) setSelProject(p);
+        }} />
+
       </div>
 
       {/* ══════════ PROJECT MODAL ══════════ */}
@@ -1663,6 +1837,9 @@ export default function VishalrajPortfolio() {
         {showTerminal && <TerminalOverlay show={true} onClose={() => setShowTerminal(false)} scrollTo={scrollTo} />}
       </AnimatePresence>
       <ConfettiExplosion show={showConfetti} />
+
+      {/* ══════════ LIVE DEMO TOAST ══════════ */}
+      <LiveDemoToast show={showLiveDemoToast} onClose={() => setShowLiveDemoToast(false)} />
     </div>
   );
 }
