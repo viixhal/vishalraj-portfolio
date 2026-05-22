@@ -1032,13 +1032,14 @@ function ContactBtn({ onClick }) {
 }
 
 /* ── Resume — minimal interaction ────────────────────────────────────────── */
-function ResumeBtn() {
+function ResumeBtn({ onOpen }) {
   const [hovered, setHovered] = useState(false);
   return (
     <motion.button
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       whileTap={{ scale: 0.95 }}
+      onClick={onOpen}
       animate={hovered ? { background: "rgba(255,255,255,0.13)", borderColor: "rgba(255,255,255,0.30)" } : {}}
       style={{ ...S.btnG, position: "relative" }}
     >
@@ -1059,6 +1060,300 @@ function ResumeBtn() {
         style={{ position: "absolute", bottom: 6, left: "20%", right: "20%", height: 1, background: "rgba(255,255,255,0.4)", transformOrigin: "left", borderRadius: 999 }}
       />
     </motion.button>
+  );
+}
+
+/* ── ResumeModal — full-screen resume viewer ──────────────────────────────── */
+function ResumeModal({ onClose }) {
+  // Lock body scroll while open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  // Close on Escape
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
+
+  const RESUME_EDUCATION = [
+    { school: "SRM Inst. of Science & Technology", degree: "MCA · VDP Campus", year: "2025 – 2027", score: "CGPA: 8.67" },
+    { school: "B.S. Abdur Rahman Crescent Univ.", degree: "BCA · Cloud Tech. & Info. Security", year: "2021 – 2024", score: "CGPA: 7.69" },
+    { school: "DAV Matriculation Hr. Sec. School", degree: "Higher Secondary · Computer Science", year: "Graduated 2021", score: "67.17%" },
+    { school: "DAV Matriculation Hr. Sec. School", degree: "Secondary School Leaving Certificate (SSLC)", year: "Completed 2019", score: "53.2%" },
+  ];
+
+  const RESUME_SKILLS = [
+    { cat: "Frontend", items: "React, JavaScript, HTML/CSS, Figma" },
+    { cat: "Backend & APIs", items: "Node.js, Solidity, Python, Express, Firebase" },
+    { cat: "Data & Cloud", items: "SQL, MongoDB, IPFS, AWS, Arduino/IoT" },
+    { cat: "Blockchain", items: "Ethereum, Smart Contracts, Web3.js, MetaMask" },
+    { cat: "AI / Vision", items: "ML, OpenCV, scikit-learn" },
+  ];
+
+  const RESUME_PROJECTS = [
+    {
+      title: "Blockchain Payment System",
+      tech: "Solidity · Ethereum · Web3.js · React · MetaMask · Node.js · Firebase",
+      year: "2021 – 2022",
+      bullets: [
+        "Built a decentralised payment gateway on Ethereum that removes intermediaries — transaction fees down ~60% vs a traditional processor baseline.",
+        "Wrote Solidity smart contracts with escrow, auto-release, and dispute resolution; contract interfaces structured following ERC-20 conventions.",
+        "Wired MetaMask wallet auth and Web3.js event listeners so users see on-chain confirmation in real time without polling.",
+        "Designed the React checkout UI — added live gas estimation and a status tracker that updates as blocks confirm.",
+        "Used Firebase for real-time transaction state sync and user session persistence on the frontend.",
+      ],
+    },
+    {
+      title: "Decentralised E-Commerce Platform",
+      tech: "Solidity · IPFS · React · Ethereum · Node.js · MongoDB",
+      year: "2021 – 2022",
+      bullets: [
+        "Designed the full order lifecycle in smart contracts (listing → purchase → escrow → delivery) so neither party needs to trust a central server.",
+        "Stored product metadata and images on IPFS instead of a centralised host, making the storefront resilient to takedowns.",
+        "Implemented on-chain role access control to distinguish sellers and buyers without a username/password system.",
+        "Lazy-loaded the React storefront and optimised asset bundling — brought initial load time down ~40% on a slow-3G simulation.",
+      ],
+    },
+    {
+      title: "AI Image Analyzer — Deepfake Detection",
+      tech: "Python · OpenCV · scikit-learn · Flask · REST API",
+      year: "2023 – 2024",
+      bullets: [
+        "Trained a binary classifier to detect AI-generated images; hit ~88% accuracy on a held-out test set (500 real / 500 synthetic).",
+        "Built an OpenCV preprocessing pipeline — noise filtering, edge detection, histogram normalisation — before features hit the model.",
+        "Deployed as a Flask REST API; false-positive rate dropped 22% after prediction threshold tuning.",
+      ],
+    },
+    {
+      title: "Smart Study Monitor — IoT",
+      tech: "Arduino · Python · DHT11 / LDR / Sound Sensors · Data Analytics",
+      year: "2025 – 2026",
+      bullets: [
+        "Wired DHT11 (temp/humidity), LDR (light), and sound sensor to Arduino and streamed readings to Python over serial.",
+        "Python script monitors incoming values and fires alerts when conditions drop below manually calibrated focus thresholds.",
+        "Rolled sensor logs into weekly reports — productivity dips noticeably in the first 30 min after lights dim.",
+      ],
+    },
+  ];
+
+  const RESUME_STRENGTHS = [
+    "Ships without hand-holding — self-taught across the full stack",
+    "Cross-functional collaboration",
+    "Problem-solving under constraints",
+    "Clean code & documentation habits",
+  ];
+
+  const RESUME_COURSEWORK = [
+    "Data Structures & Algorithms",
+    "Database Management Systems",
+    "System Design Fundamentals",
+    "Cloud Computing & Security",
+    "Machine Learning Basics",
+  ];
+
+  const RESUME_PROFILES = [
+    { label: "Portfolio", val: "vishalraj-portfolio", href: "https://vishalraj-portfolio.vercel.app" },
+    { label: "GitHub", val: "viixhal", href: "https://github.com/viixhal" },
+    { label: "LinkedIn", val: "tsr-vishalraj", href: "https://www.linkedin.com/in/tsr-vishalraj-256106401" },
+    { label: "Email", val: "vkkmmg22@gmail.com", href: "mailto:vkkmmg22@gmail.com" },
+  ];
+
+  const sectionLabel = (text) => (
+    <div style={{
+      fontSize: 9.5, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase",
+      color: "rgba(255,255,255,0.35)", marginBottom: 10, marginTop: 24,
+      paddingBottom: 6, borderBottom: "1px solid rgba(255,255,255,0.08)",
+    }}>{text}</div>
+  );
+
+  return (
+    <motion.div
+      id="resume-modal-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.22 }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 10000,
+        background: "rgba(0,0,0,0.75)",
+        backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)",
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        padding: "24px 16px", overflowY: "auto",
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 40, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.97 }}
+        transition={{ type: "spring", stiffness: 280, damping: 26 }}
+        style={{
+          width: "100%", maxWidth: 860,
+          background: "rgba(14,14,14,0.97)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: "1.8rem",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.08)",
+          overflow: "hidden",
+          fontFamily: "'Inter', system-ui, sans-serif",
+          position: "relative",
+        }}
+      >
+        {/* ── Header bar ── */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "20px 28px",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          background: "rgba(255,255,255,0.03)",
+          backdropFilter: "blur(20px)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: "50%",
+              border: "1px solid rgba(255,255,255,0.14)",
+              background: "rgba(255,255,255,0.07)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <span style={{ fontSize: 15 }}>📄</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#f0f0f0", letterSpacing: "-0.01em" }}>Vishalraj TSR — Resume</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>Full-Stack · Blockchain · AI / Computer Vision · IoT</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <motion.button
+              id="resume-print-btn"
+              whileHover={{ background: "rgba(255,255,255,0.13)", scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => window.print()}
+              style={{
+                borderRadius: 9999, border: "1px solid rgba(255,255,255,0.17)",
+                background: "rgba(255,255,255,0.07)",
+                color: "#f0f0f0", padding: "7px 16px", fontSize: 11, fontWeight: 600,
+                cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <Download style={{ width: 11, height: 11 }} /> Save / Print
+            </motion.button>
+            <CloseBtn onClick={onClose} />
+          </div>
+        </div>
+
+        {/* ── Resume body ── */}
+        <div id="resume-print-area" style={{ padding: "28px 32px 40px" }}>
+
+          {/* Name + tagline */}
+          <div style={{ textAlign: "center", marginBottom: 22, paddingBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 36, fontWeight: 800, letterSpacing: "-0.03em", color: "#f0f0f0", margin: 0 }}>
+              Vishalraj <span style={{ fontWeight: 900 }}>TSR</span>
+            </h1>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.42)", letterSpacing: "0.18em", marginTop: 6 }}>
+              Full-Stack Developer &nbsp;·&nbsp; Blockchain &nbsp;·&nbsp; AI / Computer Vision &nbsp;·&nbsp; IoT
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px 16px", marginTop: 8 }}>
+              {RESUME_PROFILES.map(p => (
+                <a key={p.label} href={p.href} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: 10.5, color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
+                >{p.val}</a>
+              ))}
+              <span style={{ fontSize: 10.5, color: "rgba(255,255,255,0.45)" }}>Chennai, India</span>
+            </div>
+          </div>
+
+          {/* Two-column layout */}
+          <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "0 28px" }}>
+
+            {/* ── Left column ── */}
+            <div>
+              {sectionLabel("Education")}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {RESUME_EDUCATION.map((e, i) => (
+                  <div key={i}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#e0e0e0", lineHeight: 1.4 }}>{e.school}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", marginTop: 2, lineHeight: 1.4 }}>{e.degree}</div>
+                    <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.28)", marginTop: 2, fontStyle: "italic" }}>{e.year} · {e.score}</div>
+                  </div>
+                ))}
+              </div>
+
+              {sectionLabel("Skills")}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {RESUME_SKILLS.map(s => (
+                  <div key={s.cat}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "#d0d0d0" }}>{s.cat}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.42)", marginTop: 2, lineHeight: 1.5 }}>{s.items}</div>
+                  </div>
+                ))}
+              </div>
+
+              {sectionLabel("Profiles")}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {RESUME_PROFILES.map(p => (
+                  <div key={p.label} style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
+                    <span style={{ fontSize: 9.5, fontWeight: 700, color: "rgba(255,255,255,0.35)", minWidth: 52 }}>{p.label}</span>
+                    <a href={p.href} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", textDecoration: "none", wordBreak: "break-all" }}
+                    >{p.val}</a>
+                  </div>
+                ))}
+              </div>
+
+              {sectionLabel("Strengths")}
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                {RESUME_STRENGTHS.map((s, i) => (
+                  <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                    <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 9, marginTop: 3, flexShrink: 0 }}>•</span>
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: s.replace(" — ", " — <em>") + (s.includes(" — ") ? "</em>" : "") }} />
+                  </div>
+                ))}
+              </div>
+
+              {sectionLabel("Coursework")}
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                {RESUME_COURSEWORK.map((c, i) => (
+                  <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                    <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 9, marginTop: 3, flexShrink: 0 }}>•</span>
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>{c}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Right column ── */}
+            <div>
+              {sectionLabel("Career Objective")}
+              <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.58)", lineHeight: 1.75, margin: 0 }}>
+                I don't have years of experience — I have four shipped projects, a full-stack skillset I built myself, and a habit of finishing what I start. MCA student at SRM, Chennai. I write code that works, and I figure out what I don't know fast. If you need someone who shows up ready to contribute, not just ready to learn, that's me.
+              </p>
+
+              {sectionLabel("Projects")}
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                {RESUME_PROJECTS.map((proj, pi) => (
+                  <div key={pi}>
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "4px 10px", marginBottom: 5 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: "#e8e8e8" }}>{proj.title}</span>
+                      <span style={{ fontSize: 9.5, color: "rgba(255,255,255,0.35)", fontStyle: "italic" }}>{proj.tech}</span>
+                      <span style={{ fontSize: 9.5, color: "rgba(255,255,255,0.28)", marginLeft: "auto" }}>{proj.year}</span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {proj.bullets.map((b, bi) => (
+                        <div key={bi} style={{ display: "flex", gap: 7, alignItems: "flex-start" }}>
+                          <span style={{ color: "rgba(255,255,255,0.22)", fontSize: 9, marginTop: 4, flexShrink: 0 }}>•</span>
+                          <span style={{ fontSize: 10.5, color: "rgba(255,255,255,0.52)", lineHeight: 1.65 }}>{b}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -1206,6 +1501,7 @@ export default function VishalrajPortfolio() {
   const [selProject, setSelProject] = useState(null);
   const [showTools, setShowTools] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
+  const [showResume, setShowResume] = useState(false);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const [now, setNow] = useState(new Date());
@@ -1463,7 +1759,7 @@ export default function VishalrajPortfolio() {
                   <ContactBtn onClick={() => scrollTo("Contact")} />
 
                   {/* ── Resume: download arrow bounces down on hover ── */}
-                  <ResumeBtn />
+                  <ResumeBtn onOpen={() => setShowResume(true)} />
 
                 </div>
               </motion.div>
@@ -1624,7 +1920,7 @@ export default function VishalrajPortfolio() {
                   </p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
                     <MagSendBtn />
-                    <ResumeBtn />
+                    <ResumeBtn onOpen={() => setShowResume(true)} />
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     {[
