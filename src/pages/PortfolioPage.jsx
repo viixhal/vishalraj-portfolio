@@ -1269,30 +1269,6 @@ function MagSocialPill({ label, href }) {
         transition: "background 0.15s, border-color 0.15s"
       }}
     >
-      style={{ ...S.btnW }}
-    >
-      <Mail style={{ width: 13, height: 13 }} /> Send Email
-    </motion.button>
-  );
-}
-
-/* ── MagSocialPill — social link pill with minimal interaction ─────────────────── */
-function MagSocialPill({ label, href }) {
-  return (
-    <motion.a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      whileHover={{ scale: 1.02, background: "rgba(255,255,255,0.08)" }}
-      whileTap={{ scale: 0.98 }}
-      style={{
-        borderRadius: T.pill, border: "1px solid rgba(255,255,255,0.11)",
-        background: "rgba(255,255,255,0.05)", padding: "6px 15px",
-        fontSize: 11, color: T.textSub, cursor: "pointer",
-        textDecoration: "none", display: "inline-block",
-        transition: "background 0.15s, border-color 0.15s"
-      }}
-    >
       {label}
     </motion.a>
   );
